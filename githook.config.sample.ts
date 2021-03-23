@@ -3,6 +3,8 @@ import { GithookConfig } from './src/types'
 const config: GithookConfig = {
   port: 9000,
   cooldown: 3000,
+  verboseHeader: false,
+  verboseBody: false,
   hooks: [
     {
       name: 'example',

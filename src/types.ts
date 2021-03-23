@@ -14,5 +14,7 @@ export interface GithookHookConfigEvent {
 export interface GithookConfig {
   port: number
   cooldown: number
+  verboseHeader?: boolean
+  verboseBody?: boolean
   hooks: GithookHookConfig[]
 }

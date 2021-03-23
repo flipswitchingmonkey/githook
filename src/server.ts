@@ -17,6 +17,8 @@ app.use(express.json())
 config.hooks.map(hook => {
   app.post(hook.endpoint, (req, res) => {
     let status = 200
+    if (config.verboseHeader) console.table(req.headers)
+    if (config.verboseBody) console.log(req.body)
     if (_githookLastReceived[hook.endpoint] + config.cooldown < Date.now()) {
       _githookLastReceived[hook.endpoint] = Date.now()
       try {
