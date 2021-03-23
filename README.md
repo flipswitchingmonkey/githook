@@ -54,3 +54,7 @@ const config: GithookConfig = {
 Recommended: use `pm2` to control the server, e.g. with `pm2 start yarn --interpreter bash --name githook -- start`
 
 Alternatively run through `yarn start` or `yarn dev` for the development server version
+
+### Setting up a webhook
+
+![Screenshot 2021-03-23 at 16 49 19](https://user-images.githubusercontent.com/6930367/112186843-d1581a00-8c01-11eb-9364-03cccd5d244d.png)
