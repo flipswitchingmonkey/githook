@@ -71,6 +71,32 @@ Recommended: use `pm2` to control the server, e.g. with `pm2 start yarn --interp
 
 Alternatively run through `yarn start` or `yarn dev` for the development server version
 
-### Setting up a webhook
+### Setting up a webhook (the Github Actions way)
+
+This repo contains a sample Github Action that triggers a webhook containing the entire usual Github Event data in its body, but can be manually triggered thanks to `workflow_dispatch` and also has the advantage of actually being inside the repository. Here's the sample code:
+
+```
+name: Deploy through webhook
+
+# run manually
+on:
+  workflow_dispatch:
+
+jobs:
+  issue_webhook:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Webhook
+      uses: distributhor/workflow-webhook@v1
+      env:
+        webhook_type: 'json-extended'
+        webhook_url: ${{ secrets.WEBHOOK_URL }}
+        webhook_secret: ${{ secrets.WEBHOOK_SECRET }}
+```
+
+`WEBHOOK_URL` and `WEBHOOK_SECRET` are set up in the repository settings under `settings/secrets/actions`
+
+### Setting up a webhook (the old way)
 
 ![Screenshot 2021-03-23 at 16 49 19](https://user-images.githubusercontent.com/6930367/112186843-d1581a00-8c01-11eb-9364-03cccd5d244d.png)
