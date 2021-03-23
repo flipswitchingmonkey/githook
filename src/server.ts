@@ -11,12 +11,6 @@ const logger = new Logger({
 const app = express()
 
 app.use(express.json())
-
-app.use((req, res, next) => {
-  res.sendStatus(401)
-  next()
-})
-
 config.hooks.map(hook => {
   app.post(hook.endpoint, (req, res) => {
     if (req.body) {
@@ -31,25 +25,29 @@ config.hooks.map(hook => {
                   `Received webhook "${hook.name}" event "${event.event}" -> (☞ﾟヮﾟ)☞ executing "${event.cmd}"`,
                 )
                 exec(event.cmd)
+                res.sendStatus(200)
               } else {
                 logger.log(`Received webhook "${hook.name}" but no event matches -> (⊙︿⊙)"`)
+                res.sendStatus(501)
               }
             })
           } else {
             logger.log(
               `Received webhook "${hook.name}" but signature does not match -> (╯°□°)╯︵ ┻━┻"`,
             )
+            res.sendStatus(401)
           }
         }
       } catch (e) {
         logger.log(`Exception! ヽ(。_°)ノ ${e}`)
       }
     }
+    res.end()
   })
 })
 
 app.listen(config.port, () => {
-  console.log(`⚡️[server]: Githook Server is running at https://localhost:${config.port}`)
+  console.log(`⚡️[server]: Githook Server is running at http://localhost:${config.port}`)
   console.log(`⚡️[server]: Setting up listeners:`)
   const hooks: any[] = config.hooks.map(hook => {
     return {
