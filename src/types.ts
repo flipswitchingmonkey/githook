@@ -1,11 +1,14 @@
 export interface GithookHookConfig {
   name: string
+  repository?: string
   endpoint: string
   secret: string
-  events: {
-    event: string
-    cmd: string
-  }[]
+  events: GithookHookConfigEvent[]
+}
+
+export interface GithookHookConfigEvent {
+  event: string[]
+  cmd: string
 }
 
 export interface GithookConfig {

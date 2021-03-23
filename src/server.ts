@@ -19,28 +19,47 @@ app.use((req, res, next) => {
 
 config.hooks.map(hook => {
   app.post(hook.endpoint, (req, res) => {
-    // console.log(req.headers['x-hub-signature'])
-    // console.log(req.headers['x-hub-signature-256'])
     if (req.body) {
-      const signature = calcSignature(hook.secret, JSON.stringify(req.body))
-      if (signature === req.headers['x-hub-signature']) {
-        const githubEvent = req.headers['x-github-event']?.toString()
-        hook.events.map(event => {
-          if (event.event === githubEvent || event.event === '*') {
+      try {
+        const signature = calcSignature(hook.secret, JSON.stringify(req.body))
+        if (signature === req.headers['x-hub-signature']) {
+          if (!hook.repository || req.body.repository.full_name === hook.repository) {
+            const githubEvent = req.headers['x-github-event']?.toString()
+            hook.events.map(event => {
+              if (event.event.find(val => val === githubEvent || val === '*')) {
+                logger.log(
+                  `Received webhook "${hook.name}" event "${event.event}" -> (☞ﾟヮﾟ)☞ executing "${event.cmd}"`,
+                )
+                exec(event.cmd)
+              } else {
+                logger.log(`Received webhook "${hook.name}" but no event matches -> (⊙︿⊙)"`)
+              }
+            })
+          } else {
             logger.log(
-              `Received webhook "${hook.name}" event "${event.event}" -> executing "${event.cmd}"`,
+              `Received webhook "${hook.name}" but signature does not match -> (╯°□°)╯︵ ┻━┻"`,
             )
-
-            exec(event.cmd)
           }
-        })
+        }
+      } catch (e) {
+        logger.log(`Exception! ヽ(。_°)ノ ${e}`)
       }
     }
   })
 })
 
-app.get('/', (req, res) => res.send('Express + TypeScript Server'))
-
 app.listen(config.port, () => {
-  console.log(`⚡️[server]: Server is running at https://localhost:${config.port}`)
+  console.log(`⚡️[server]: Githook Server is running at https://localhost:${config.port}`)
+  console.log(`⚡️[server]: Setting up listeners:`)
+  const hooks: any[] = config.hooks.map(hook => {
+    return {
+      name: hook.name,
+      endpoint: hook.endpoint,
+      repository: hook.repository || 'n/a',
+      events: hook.events.map(event => {
+        return `${event.event}: ${event.cmd}`
+      }),
+    }
+  })
+  console.table(hooks)
 })
