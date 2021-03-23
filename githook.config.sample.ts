@@ -14,6 +14,18 @@ const config: GithookConfig = {
           event: ['*'],
           cmd: 'echo "A webhook as arrived!"',
         },
+        {
+          event: ['release:published'],
+          cmd: 'echo "release:published has arrived!"',
+        },
+        {
+          event: ['push'],
+          cmd: 'echo "push has arrived!"',
+        },
+        {
+          event: ['release:*'],
+          cmd: 'echo "release:* has arrived!"',
+        },
       ],
     },
   ],

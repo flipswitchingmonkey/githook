@@ -33,6 +33,18 @@ const config: GithookConfig = {
           event: ['*'],
           cmd: 'echo "A webhook as arrived!"',
         },
+        {
+          event: ['release:published'],
+          cmd: 'echo "release:published has arrived!"',
+        },
+        {
+          event: ['push'],
+          cmd: 'echo "push has arrived!"',
+        },
+        {
+          event: ['release:*'],
+          cmd: 'echo "release:* has arrived!"',
+        },
       ],
     },
   ],
@@ -47,7 +59,7 @@ const config: GithookConfig = {
   - `endpoint` the endpoint being set up by Express to listen for incoming webhooks
   - `secret` the secret as defined in your Github webhook. doing an SHA1 comparison at the moment, though you could also use - SHA256 if you like (it's in the code but not exposed right now)
   - `events` an array of `GithookHookConfigEvent`:
-    - `event` an array of strings with the Github event name as found in the `x-github-event` header. Can listen to multiple events (one array entry per event) or `'*'` to just listen to any event coming in
+    - `event` an array of strings with the Github event name as found in the `x-github-event` header. Can listen to multiple events (one array entry per event) or `'*'` to just listen to any event coming in. event and action can be combined for events that support it, e.g. `release` events which can have created, published, released actions. an event would be `released:published` for example to only trigger when that release has been published, not e.g. just drafted. `release` and `release:*` are treated the same.
     - `cmd` the command to be executed via child_process. an example would be `'cd /to/my/repo && ./pullAndRestart.sh'`
 
 ### Running

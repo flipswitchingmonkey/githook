@@ -16,6 +16,7 @@ const app = express()
 app.use(express.json())
 config.hooks.map(hook => {
   app.post(hook.endpoint, (req, res) => {
+    let status = 200
     if (_githookLastReceived[hook.endpoint] + config.cooldown < Date.now()) {
       _githookLastReceived[hook.endpoint] = Date.now()
       try {
@@ -23,24 +24,36 @@ config.hooks.map(hook => {
         if (signature === req.headers['x-hub-signature']) {
           if (!hook.repository || req.body.repository.full_name === hook.repository) {
             const githubEvent = req.headers['x-github-event']?.toString()
+            const githubEventAction = req.body.action
+              ? `${githubEvent}:${req.body.action}`
+              : githubEvent
             hook.events.map(event => {
-              if (event.event.find(val => val === githubEvent || val === '*')) {
+              const eventParts = event.event
+              if (
+                event.event.find(
+                  val =>
+                    val === githubEvent ||
+                    val === githubEventAction ||
+                    val === `${githubEvent}:*` ||
+                    val === '*',
+                )
+              ) {
                 logger.log(
-                  `Received webhook "${hook.name}" event "${event.event}" -> (☞ﾟヮﾟ)☞ executing "${event.cmd}"`,
+                  `Received webhook "${hook.name}" event "${githubEventAction}" matching "${event.event}" -> (☞ﾟヮﾟ)☞ executing "${event.cmd}"`,
                 )
                 const cmdProcess = exec(event.cmd)
                 cmdProcess.stdout?.pipe(process.stdout)
-                res.sendStatus(200)
+                status = 200
               } else {
-                logger.log(`Received webhook "${hook.name}" but no event matches -> (⊙︿⊙)"`)
-                res.sendStatus(501)
+                // logger.log(`Received webhook "${hook.name}" but no event matches -> (⊙︿⊙)"`)
+                status = 501
               }
             })
           } else {
             logger.log(
               `Received webhook "${hook.name}" but signature does not match -> (╯°□°)╯︵ ┻━┻"`,
             )
-            res.sendStatus(401)
+            status = 401
           }
         }
       } catch (e) {
@@ -51,8 +64,9 @@ config.hooks.map(hook => {
       logger.log(
         `Received webhook "${hook.name}" (again) but cooldown has not finished. Try again in ${waitfor}ms`,
       )
-      res.status(429).send(`Try again in ${waitfor}ms`)
+      status = 429
     }
+    res.sendStatus(status)
     res.end()
   })
 })
