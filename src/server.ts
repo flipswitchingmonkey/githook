@@ -8,12 +8,16 @@ const logger = new Logger({
   logconsole: true,
   timestamp: 'YYYY-DD-MM HH:mm:ss',
 })
+
+const _githookLastReceived: { [key: string]: number } = {}
+
 const app = express()
 
 app.use(express.json())
 config.hooks.map(hook => {
   app.post(hook.endpoint, (req, res) => {
-    if (req.body) {
+    if (_githookLastReceived[hook.endpoint] + config.cooldown < Date.now()) {
+      _githookLastReceived[hook.endpoint] = Date.now()
       try {
         const signature = calcSignature(hook.secret, JSON.stringify(req.body))
         if (signature === req.headers['x-hub-signature']) {
@@ -42,6 +46,12 @@ config.hooks.map(hook => {
       } catch (e) {
         logger.log(`Exception! ヽ(。_°)ノ ${e}`)
       }
+    } else {
+      const waitfor = _githookLastReceived[hook.endpoint] + config.cooldown - Date.now()
+      logger.log(
+        `Received webhook "${hook.name}" (again) but cooldown has not finished. Try again in ${waitfor}ms`,
+      )
+      res.status(429).send(`Try again in ${waitfor}ms`)
     }
     res.end()
   })
@@ -51,6 +61,7 @@ app.listen(config.port, () => {
   console.log(`⚡️[server]: Githook Server is running at http://localhost:${config.port}`)
   console.log(`⚡️[server]: Setting up listeners:`)
   const hooks: any[] = config.hooks.map(hook => {
+    _githookLastReceived[hook.endpoint] = Date.now()
     return {
       name: hook.name,
       endpoint: hook.endpoint,

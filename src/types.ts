@@ -13,5 +13,6 @@ export interface GithookHookConfigEvent {
 
 export interface GithookConfig {
   port: number
+  cooldown: number
   hooks: GithookHookConfig[]
 }
