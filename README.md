@@ -44,7 +44,7 @@ const config: GithookConfig = {
           cmd: 'echo "push has arrived!"',
         },
         {
-          event: ['release:*'],
+          event: ['release:*','workflow_dispatch'],
           cmd: 'echo "release:* has arrived!"',
         },
       ],
@@ -73,7 +73,7 @@ Alternatively run through `yarn start` or `yarn dev` for the development server 
 
 ### Setting up a webhook (the Github Actions way)
 
-This repo contains a sample Github Action that triggers a webhook containing the entire usual Github Event data in its body, but can be manually triggered thanks to `workflow_dispatch` and also has the advantage of actually being inside the repository. Here's the sample code:
+This repo contains a sample Github Action that triggers a webhook containing the entire usual Github Event data in its body, but can be manually triggered thanks to `workflow_dispatch` and also has the advantage of actually being inside the repository. Make sure to listen to the `'workflow_dispatch'` event in your configuration! Here's the sample code:
 
 ```
 name: Deploy through webhook
