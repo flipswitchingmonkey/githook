@@ -24,7 +24,8 @@ config.hooks.map(hook => {
                 logger.log(
                   `Received webhook "${hook.name}" event "${event.event}" -> (☞ﾟヮﾟ)☞ executing "${event.cmd}"`,
                 )
-                exec(event.cmd)
+                const cmdProcess = exec(event.cmd)
+                cmdProcess.stdout?.pipe(process.stdout)
                 res.sendStatus(200)
               } else {
                 logger.log(`Received webhook "${hook.name}" but no event matches -> (⊙︿⊙)"`)
