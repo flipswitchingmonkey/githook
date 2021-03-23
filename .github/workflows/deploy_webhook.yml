@@ -1,0 +1,17 @@
+name: Deploy through webhook
+
+# run manually
+on:
+  workflow_dispatch:
+
+jobs:
+  issue_webhook:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Webhook
+      uses: distributhor/workflow-webhook@v1
+      env:
+        webhook_url: ${{ secrets.WEBHOOK_URL }}
+        webhook_secret: ${{ secrets.WEBHOOK_SECRET }}
+        data: '{ "repository": "${{github.event.repository.full_name}}", "action": "${{github.event.action}}" }'
