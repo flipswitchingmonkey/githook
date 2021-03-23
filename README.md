@@ -21,6 +21,7 @@ Configuration happens in `githook.config.ts`. It's using a pretty straightforwar
 ```
 const config: GithookConfig = {
   port: 9000,
+  cooldown: 3000,
   hooks: [
     {
       name: 'example',
