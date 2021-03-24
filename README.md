@@ -136,7 +136,7 @@ As mentioned above, for running with pm2 use this:
 
 pm2githook.sh
 ```
-`pm2 start yarn --interpreter bash --name githook -- start`
+pm2 start yarn --interpreter bash --name githook -- start
 ```
 
 update.sh
