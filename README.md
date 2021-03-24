@@ -145,3 +145,5 @@ git pull
 yarn
 pm2 restart githook
 ```
+
+Remember to `chmod +x update.sh`
