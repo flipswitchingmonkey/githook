@@ -100,3 +100,48 @@ jobs:
 ### Setting up a webhook (the old way)
 
 ![Screenshot 2021-03-23 at 16 49 19](https://user-images.githubusercontent.com/6930367/112186843-d1581a00-8c01-11eb-9364-03cccd5d244d.png)
+
+### Example for updating Githook itself
+
+This repo has an action set up like so - obviously you will need your own action so it points to the correct endpoint etc.
+
+```
+import { GithookConfig } from './src/types'
+
+const config: GithookConfig = {
+  port: 9000,
+  cooldown: 3000,
+  verboseHeader: true,
+  verboseBody: true,
+  hooks: [
+    {
+      name: 'Githook',
+      endpoint: '/hooks/githook',
+      repository: 'flipswitchingmonkey/githook',
+      secret: 'somesecret',
+      events: [
+        {
+          event: ['release:published','workflow_dispatch'],
+          cmd: 'cd /opt/githook && ./update.sh',
+        },
+      ],
+    },
+  ],
+}
+
+export default config
+```
+
+As mentioned above, for running with pm2 use this:
+
+pm2githook.sh
+```
+`pm2 start yarn --interpreter bash --name githook -- start`
+```
+
+update.sh
+```
+git pull
+yarn
+pm2 restart githook
+```
