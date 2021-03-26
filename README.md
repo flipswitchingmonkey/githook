@@ -1,4 +1,4 @@
-## Githook
+# Githook
 
 A simple node.js/Express server listening for Github Webhooks and executing commands upon receiving specific (or any) event.
 
