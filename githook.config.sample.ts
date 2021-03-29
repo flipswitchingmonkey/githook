@@ -2,31 +2,37 @@ import { GithookConfig } from './src/types'
 
 const config: GithookConfig = {
   port: 9000,
-  cooldown: 3000,
-  verboseHeader: false,
+  cooldown: 2000,
+  verboseHeader: true,
   verboseBody: false,
+  verboseMatches: false,
   hooks: [
     {
-      name: 'example',
-      endpoint: '/myrepohook',
-      repository: 'flipswitchingmonkey/githook',
-      secret: 'mysupersecretkey',
+      name: 'HookTest',
+      endpoint: '/hook_test',
+      secret: 'somesecret',
       events: [
         {
-          event: ['*'],
-          cmd: 'echo "A webhook as arrived!"',
+          name: 'PR merged with master',
+          event: 'pull_request',
+          body: {
+            'repository.full_name': 'flipswitchingmonkey/githook',
+            'action': 'closed',
+            'pull_request.merged': true,
+            'pull_request.base.ref': 'master',
+          },
+          cmd: 'echo PR merged with master"',
         },
         {
-          event: ['release:published'],
-          cmd: 'echo "release:published has arrived!"',
-        },
-        {
-          event: ['push'],
-          cmd: 'echo "push has arrived!"',
-        },
-        {
-          event: ['release:*'],
-          cmd: 'echo "release:* has arrived!"',
+          name: 'PR merged with development',
+          event: 'pull_request',
+          body: {
+            'repository.full_name': 'flipswitchingmonkey/githook',
+            'action': 'closed',
+            'pull_request.merged': true,
+            'pull_request.base.ref': 'development',
+          },
+          cmd: 'echo PR merged with development"',
         },
       ],
     },

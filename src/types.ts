@@ -1,14 +1,16 @@
 export interface GithookHookConfig {
   name: string
-  repository?: string
   endpoint: string
   secret: string
   events: GithookHookConfigEvent[]
 }
 
 export interface GithookHookConfigEvent {
-  event: string[]
+  name: string
+  event: string
+  body: { [key: string]: string | number | boolean }
   cmd: string
+  id?: string | number
 }
 
 export interface GithookConfig {
@@ -16,5 +18,9 @@ export interface GithookConfig {
   cooldown: number
   verboseHeader?: boolean
   verboseBody?: boolean
+  verboseMatches?: boolean
+
   hooks: GithookHookConfig[]
 }
+
+export interface IncomingGithook {}

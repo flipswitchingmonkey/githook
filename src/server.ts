@@ -1,15 +1,24 @@
 import express from 'express'
+import _ from 'lodash'
 import config from '../githook.config'
-import { calcSignature } from './utils'
+import {
+  calcSignature,
+  checkCooldown,
+  checkMatchingBody,
+  findEventInHook,
+  getRemainingCooldown,
+  resetCooldown,
+} from './utils'
 import { exec } from 'child_process'
 import { Logger } from './logger'
+import { v4 as uuidv4 } from 'uuid'
 
 const logger = new Logger({
   logconsole: true,
   timestamp: 'YYYY-DD-MM HH:mm:ss',
 })
 
-const _githookLastReceived: { [key: string]: number } = {}
+export const _githookLastReceived: { [key: string]: number } = {}
 
 const app = express()
 
@@ -19,55 +28,50 @@ config.hooks.map(hook => {
     let status = 200
     if (config.verboseHeader) console.table(req.headers)
     if (config.verboseBody) console.log(req.body)
-    if (_githookLastReceived[hook.endpoint] + config.cooldown < Date.now()) {
-      _githookLastReceived[hook.endpoint] = Date.now()
-      try {
-        const signature = calcSignature(hook.secret, JSON.stringify(req.body))
-        if (signature === req.headers['x-hub-signature']) {
-          if (!hook.repository || req.body.repository.full_name === hook.repository) {
-            const githubEvent = req.headers['x-github-event']?.toString()
-            const githubEventAction = req.body.action
-              ? `${githubEvent}:${req.body.action}`
-              : githubEvent
-            hook.events.map(event => {
-              const eventParts = event.event
-              if (
-                event.event.find(
-                  val =>
-                    val === githubEvent ||
-                    val === githubEventAction ||
-                    val === `${githubEvent}:*` ||
-                    val === '*',
-                )
-              ) {
+
+    try {
+      const signature = calcSignature(hook.secret, JSON.stringify(req.body))
+      if (signature === req.headers['x-hub-signature']) {
+        const githubEventName = req.headers['x-github-event']?.toString() || '*'
+        const matchingEvents = findEventInHook(hook, githubEventName)
+        if (matchingEvents?.length > 0) {
+          matchingEvents.map(matchingEvent => {
+            if (checkMatchingBody(matchingEvent, req.body)) {
+              if (checkCooldown(matchingEvent.id!)) {
+                resetCooldown(matchingEvent.id!)
                 logger.log(
-                  `Received webhook "${hook.name}" event "${githubEventAction}" matching "${event.event}" -> (☞ﾟヮﾟ)☞ executing "${event.cmd}"`,
+                  `Received webhook "${hook.name}" matching ${matchingEvent.id} -> executing "${matchingEvent.cmd}"`,
                 )
-                const cmdProcess = exec(event.cmd)
+                if (config.verboseMatches) {
+                  console.log(matchingEvent)
+                }
+                const cmdProcess = exec(matchingEvent.cmd)
                 cmdProcess.stdout?.pipe(process.stdout)
                 status = 200
               } else {
-                // logger.log(`Received webhook "${hook.name}" but no event matches -> (⊙︿⊙)"`)
-                status = 501
+                logger.log(
+                  `Received webhook "${hook.name}" matching ${
+                    matchingEvent.id
+                  } (again) but cooldown has not finished. Try again in ${getRemainingCooldown(
+                    matchingEvent.id!,
+                  )}ms`,
+                )
+                status = 429
               }
-            })
-          } else {
-            logger.log(
-              `Received webhook "${hook.name}" but signature does not match -> (╯°□°)╯︵ ┻━┻"`,
-            )
-            status = 401
-          }
+            }
+          })
+        } else {
+          status = 501
         }
-      } catch (e) {
-        logger.log(`Exception! ヽ(。_°)ノ ${e}`)
+      } else {
+        logger.log(`Received webhook "${hook.name}" but signature does not match -> (╯°□°)╯︵ ┻━┻"`)
+        status = 401
       }
-    } else {
-      const waitfor = _githookLastReceived[hook.endpoint] + config.cooldown - Date.now()
-      logger.log(
-        `Received webhook "${hook.name}" (again) but cooldown has not finished. Try again in ${waitfor}ms`,
-      )
-      status = 429
+      // }
+    } catch (e) {
+      logger.log(`Exception! ヽ(。_°)ノ ${e}`)
     }
+
     res.sendStatus(status)
     res.end()
   })
@@ -76,16 +80,16 @@ config.hooks.map(hook => {
 app.listen(config.port, () => {
   console.log(`⚡️[server]: Githook Server is running at http://localhost:${config.port}`)
   console.log(`⚡️[server]: Setting up listeners:`)
-  const hooks: any[] = config.hooks.map(hook => {
-    _githookLastReceived[hook.endpoint] = Date.now()
-    return {
-      name: hook.name,
-      endpoint: hook.endpoint,
-      repository: hook.repository || 'n/a',
-      events: hook.events.map(event => {
-        return `${event.event}: ${event.cmd}`
-      }),
-    }
-  })
-  console.table(hooks)
+  for (let index = 0; index < config.hooks.length; index++) {
+    config.hooks[index].events = config.hooks[index].events.map((event, index) => {
+      const id = uuidv4()
+      resetCooldown(id)
+      return { ...event, id: uuidv4() }
+    })
+  }
+  console.table(
+    config.hooks.map(hook => {
+      return { ...hook, events: hook.events.map(event => `${event.name} (${event.id})`) }
+    }),
+  )
 })
