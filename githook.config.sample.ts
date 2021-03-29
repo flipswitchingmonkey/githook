@@ -34,6 +34,24 @@ const config: GithookConfig = {
           },
           cmd: 'echo PR merged with development"',
         },
+        {
+          name: 'New release',
+          event: 'release',
+          body: {
+            'repository.full_name': 'flipswitchingmonkey/githook',
+            'action': 'published',
+          },
+          cmd: 'cd /opt/githook && ./update.sh',
+        },
+        {
+          name: 'New release (manual)',
+          event: 'workflow_dispatch',
+          body: {
+            'repository.full_name': 'flipswitchingmonkey/githook',
+            'workflow': '.github/workflows/deploy_webhook.yml',
+          },
+          cmd: 'cd /opt/githook && ./update.sh',
+        },
       ],
     },
   ],
