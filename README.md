@@ -19,51 +19,74 @@ vi githook.config.ts
 Configuration happens in `githook.config.ts`. It's using a pretty straightforward json-like object to configure the server:
 
 ```
+import { GithookConfig } from './src/types'
+
 const config: GithookConfig = {
   port: 9000,
-  cooldown: 3000,
-  verboseHeader: false,
+  cooldown: 2000,
+  verboseHeader: true,
   verboseBody: false,
+  verboseMatches: false,
   hooks: [
     {
-      name: 'example',
-      endpoint: '/myrepohook',
-      repository: 'flipswitchingmonkey/githook',
-      secret: 'mysupersecretkey',
+      name: 'HookTest',
+      endpoint: '/hook_test',
+      secret: 'somesecret',
       events: [
         {
-          event: ['*'],
-          cmd: 'echo "A webhook as arrived!"',
+          name: 'PR merged with master',
+          event: 'pull_request',
+          body: {
+            'repository.full_name': 'flipswitchingmonkey/githook',
+            'action': 'closed',
+            'pull_request.merged': true,
+            'pull_request.base.ref': 'master',
+          },
+          cmd: 'echo PR merged with master"',
         },
         {
-          event: ['release:published'],
-          cmd: 'echo "release:published has arrived!"',
+          name: 'PR merged with development',
+          event: 'pull_request',
+          body: {
+            'repository.full_name': 'flipswitchingmonkey/githook',
+            'action': 'closed',
+            'pull_request.merged': true,
+            'pull_request.base.ref': 'development',
+          },
+          cmd: 'echo PR merged with development"',
         },
         {
-          event: ['push'],
-          cmd: 'echo "push has arrived!"',
-        },
-        {
-          event: ['release:*','workflow_dispatch'],
-          cmd: 'echo "release:* has arrived!"',
+          name: 'New release',
+          event: 'release',
+          body: {
+            'repository.full_name': 'flipswitchingmonkey/githook',
+            'action': 'published',
+          },
+          cmd: 'cd /opt/githook && ./update.sh',
         },
       ],
     },
   ],
 }
+
+export default config
+
 ```
 
 - `port` is the port the server will run on (e.g. http://localhost:9000). It is recommended to run the server behind e.g. nginx as a reverse proxy to use https. Functionality-wise this makes no difference though
 - `cooldown` ms before webhook of the same endpoint can be handled. this is to prevent cases where the same hook is sent multiple times and then e.g. triggers a full rebuild of the app multiple times in parallel - we do not want that. Returns 429 to the exceeding requests.
-- `verbose` output incoming webhooks details (can be _very_ verbose with large bodies)
-- `hook` is an array of `GithookHookConfig`:
+- `verboseHeader|verboseBody|verboseMatches` output incoming webhooks details (can be _very_ verbose with large bodies)
+- `hooks` is an array of `GithookHookConfig`:
   - `name` just a label for the log files
   - `repository` (optional) the full_name of the repository as sent in `req.body.repository.full_name` in the JSON payload (e. g. `flipswitchingmonkey/githook` in the case of this repository). If populated the name of the webhook's payload's repository must match, if left empty it is being ignored
   - `endpoint` the endpoint being set up by Express to listen for incoming webhooks
   - `secret` the secret as defined in your Github webhook. doing an SHA1 comparison at the moment, though you could also use - SHA256 if you like (it's in the code but not exposed right now)
   - `events` an array of `GithookHookConfigEvent`:
-    - `event` an array of strings with the Github event name as found in the `x-github-event` header. Can listen to multiple events (one array entry per event) or `'*'` to just listen to any event coming in. event and action can be combined for events that support it, e.g. `release` events which can have created, published, released actions. an event would be `released:published` for example to only trigger when that release has been published, not e.g. just drafted. `release` and `release:*` are treated the same.
+    - `event` a string with the Github event name as found in the `x-github-event` header
     - `cmd` the command to be executed via child_process. an example would be `'cd /to/my/repo && ./pullAndRestart.sh'`
+    - `body` matching the webhook body. githook looks for matches using lodash's `_.has()` and `_.get()` methods, so what we have here are strings on either side of each attribute, the left side being the dotted path from the webhook body, the right being the content to match. So, to match a specific repository, this has to match: `'repository.full_name': 'flipswitchingmonkey/githook'`. Using this method we can match for any combination of webhook - and there are plenty, see https://docs.github.com/en/actions/reference/events-that-trigger-workflows for reference
+
+The easiest way to set up the config is to create the webhooks first and have them fire, then look up the full body on Github's webhook log. The sample config listens for a PR merge (which creates multiple hook calls, one of them being the 'closed' action in combination with merged:true and the base branche it was merged into) into either development or master and reacts accordingly.
 
 ### Running
 
@@ -105,41 +128,18 @@ jobs:
 
 This repo has an action set up like so - obviously you will need your own action so it points to the correct endpoint etc.
 
-```
-import { GithookConfig } from './src/types'
+See example config above.
 
-const config: GithookConfig = {
-  port: 9000,
-  cooldown: 3000,
-  verboseHeader: true,
-  verboseBody: true,
-  hooks: [
-    {
-      name: 'Githook',
-      endpoint: '/hooks/githook',
-      repository: 'flipswitchingmonkey/githook',
-      secret: 'somesecret',
-      events: [
-        {
-          event: ['release:published','workflow_dispatch'],
-          cmd: 'cd /opt/githook && ./update.sh',
-        },
-      ],
-    },
-  ],
-}
-
-export default config
-```
-
-As mentioned above, for running with pm2 use this:
+For running with pm2 use this:
 
 pm2githook.sh
+
 ```
 pm2 start yarn --interpreter bash --name githook -- start
 ```
 
 update.sh
+
 ```
 git pull
 yarn
