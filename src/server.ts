@@ -14,7 +14,7 @@ import { Logger } from './logger'
 import { v4 as uuidv4 } from 'uuid'
 
 import { GithookConfig } from './types'
-import * as configJson from '../githook.config.json'
+import * as configJson from './githook.config.json'
 
 export const _logger = new Logger({
   logconsole: true,
