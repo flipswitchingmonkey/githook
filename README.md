@@ -16,7 +16,7 @@ vi githook.config.ts
 
 ### Congfiguration
 
-Configuration happens in `githook.config.json`. It's using a pretty straightforward json object to configure the server:
+Configuration happens in `/src/githook.config.json`. It's using a pretty straightforward json object to configure the server:
 
 ```
 {
